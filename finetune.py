@@ -54,7 +54,7 @@ def train(
     wandb_watch: str = "",  # options: false | gradients | all
     wandb_log_model: str = "",  # options: false | true
     resume_from_checkpoint: str = None,  # either training checkpoint or final adapter
-    prompt_template_name: str = "alpaca",  # The prompt template to use, will default to alpaca.
+    prompt_template_name: str = "rupaca",  # The prompt template to use, will default to alpaca.
 ):
     if int(os.environ.get("LOCAL_RANK", 0)) == 0:
         print(
@@ -215,7 +215,10 @@ def train(
         )
     else:
         train_data = data["train"].shuffle().map(generate_and_tokenize_prompt)
+        train_data.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
         val_data = None
+
+    print(train_data[0])
 
     if not ddp and torch.cuda.device_count() > 1:
         # keeps Trainer from trying its own DataParallelism when more than 1 gpu is available
@@ -263,9 +266,11 @@ def train(
     if torch.__version__ >= "2" and sys.platform != "win32":
         model = torch.compile(model)
 
-    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
-
-    model.save_pretrained(output_dir)
+    try:
+        trainer.train(resume_from_checkpoint=resume_from_checkpoint)
+        model.save_pretrained(output_dir)
+    except KeyboardInterrupt:
+        model.save_pretrained(output_dir)
 
     print(
         "\n If there's a warning about missing keys above, please disregard :)"

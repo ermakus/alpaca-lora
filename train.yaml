@@ -1,0 +1,29 @@
+resources:
+  accelerators: K80:8
+  disk_size: 1000
+
+num_nodes: 1
+
+file_mounts:
+  /artifacts:
+    name: ruchat # Change to your own bucket
+    store: S3
+    mode: MOUNT
+
+workdir: .
+
+setup: |
+  # Setup the environment
+  conda create -n chatbot python=3.10 -y
+  conda activate chatbot
+
+  pip install torch==1.13.1+cu116 torchvision==0.14.1+cu116 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu116
+  cd ~/sky_workdir
+
+  # Install fastchat
+
+run: |
+  cd ~/sky_workdir
+  conda activate chatbot
+  pip install -r requirements.txt
+  ./train.sh
